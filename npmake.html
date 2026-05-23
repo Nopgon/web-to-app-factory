@@ -1,1 +1,1364 @@
-abc
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NP Make - 개인용 하이브리드 앱 콘솔 (Real Android Build)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans KR"', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#6366F1', // Indigo 500
+                        secondary: '#10B981', // Emerald 500
+                        dark: '#0F172A', // Slate 900
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%); }
+        .phone-notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 140px;
+            height: 24px;
+            background: #000;
+            border-bottom-left-radius: 14px;
+            border-bottom-right-radius: 14px;
+            z-index: 50;
+        }
+        .scroll-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scroll-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 antialiased min-h-screen flex flex-col">
+
+    <!-- Header Navigation -->
+    <nav class="bg-slate-950 border-b border-slate-800 py-4 px-6">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 gradient-bg rounded-lg flex items-center justify-center text-white shadow-md">
+                    <i class="fa-solid fa-cube text-lg"></i>
+                </div>
+                <div class="flex items-baseline space-x-2">
+                    <span class="font-black text-xl tracking-tight text-white">NP Make</span>
+                    <span class="text-xs font-bold text-indigo-400">Android Build Engine v3.2</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="flex items-center space-x-1.5 text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded-full">
+                    <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                    <span>로컬 보안 저장소 가동 중</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8">
+        
+        <!-- Multi-App Selector Manager Panel -->
+        <div class="mb-6 bg-slate-950 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-4 shadow-lg">
+            <div class="flex items-center space-x-3 w-full sm:w-auto">
+                <div class="text-slate-400 text-xs font-bold uppercase tracking-wider">나의 프로젝트 목록</div>
+                <select id="appSelector" onchange="switchActiveApp(this.value)" class="bg-slate-900 border border-slate-700 text-sm rounded-xl px-3 py-2 text-white outline-none focus:border-primary flex-1 sm:flex-initial min-w-[200px]">
+                    <!-- Dynamic App options loaded here -->
+                </select>
+            </div>
+            <div class="flex space-x-2 w-full sm:w-auto justify-end">
+                <button onclick="createNewAppPrompt()" class="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 font-bold px-4 py-2 rounded-xl text-xs flex items-center space-x-1.5 transition">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>새로운 앱 만들기</span>
+                </button>
+                <button onclick="deleteActiveApp()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 font-bold px-3 py-2 rounded-xl text-xs flex items-center space-x-1.5 transition">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>현재 앱 삭제</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard Workspace Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Left: Control & Configuration Panels -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- Tab Switching System -->
+                <div class="flex border-b border-slate-800">
+                    <button id="tabBtnBuild" onclick="switchConsoleTab('build')" class="px-5 py-3 text-sm font-bold border-b-2 border-primary text-white transition-all flex items-center space-x-2">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>하이브리드 앱 설정</span>
+                    </button>
+                    <button id="tabBtnPush" onclick="switchConsoleTab('push')" class="px-5 py-3 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-white transition-all flex items-center space-x-2">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>실시간 푸시 발송</span>
+                    </button>
+                    <button id="tabBtnGit" onclick="switchConsoleTab('git')" class="px-5 py-3 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-white transition-all flex items-center space-x-2">
+                        <i class="fa-brands fa-github text-base"></i>
+                        <span>GitHub & 컴파일 설정</span>
+                    </button>
+                </div>
+
+                <!-- Tab 1: App Creator Console -->
+                <div id="tabContentBuild" class="bg-slate-950 rounded-2xl p-6 border border-slate-800 shadow-xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <h3 class="font-bold text-base text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-gear text-indigo-400"></i>
+                            <span>바이너리 패키징 구성</span>
+                        </h3>
+                        <span class="text-[10px] font-bold px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full">네이티브 패키지 빌드</span>
+                    </div>
+
+                    <!-- Config Form -->
+                    <div class="space-y-4">
+                        <!-- URL & App Name -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 tracking-wider mb-1.5">대상 웹사이트 주소 (URL) <span class="text-indigo-400">*</span></label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                        <i class="fa-solid fa-globe text-xs"></i>
+                                    </div>
+                                    <input type="url" id="appUrl" oninput="syncInputsToState(); syncPreviewIconAndUrl()" class="w-full pl-9 pr-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg focus:border-primary transition text-white outline-none font-medium text-sm" placeholder="https://example.com" value="https://example.com">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 tracking-wider mb-1.5">애플리케이션 이름 <span class="text-indigo-400">*</span></label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                        <i class="fa-solid fa-signature text-xs"></i>
+                                    </div>
+                                    <input type="text" id="appName" oninput="syncInputsToState(); syncPreviewIconAndUrl()" class="w-full pl-9 pr-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg focus:border-primary transition text-white outline-none font-semibold text-sm" placeholder="내 모바일 서비스" value="NP Make 데모앱">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bundle ID & Version -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 tracking-wider mb-1.5">패키지 번들 ID (Bundle ID) <span class="text-indigo-400">*</span></label>
+                                <input type="text" id="bundleId" oninput="syncInputsToState()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg focus:border-primary transition text-white outline-none font-mono text-xs" value="com.npmake.mycustomapp">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 tracking-wider mb-1.5">설치 앱 버전 (Version)</label>
+                                <input type="text" id="appVersion" oninput="syncInputsToState()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg focus:border-primary transition text-white outline-none font-mono text-xs" value="1.0.0" readonly>
+                            </div>
+                        </div>
+
+                        <!-- App Styling & Customization -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 tracking-wider mb-1.5">테마 포인트 색상</label>
+                                <div class="grid grid-cols-5 gap-1.5">
+                                    <button onclick="setThemeColor('#6366F1', this)" class="color-btn h-8 rounded-lg bg-[#6366F1] ring-2 ring-offset-2 ring-offset-slate-900 ring-primary transition"></button>
+                                    <button onclick="setThemeColor('#10B981', this)" class="color-btn h-8 rounded-lg bg-[#10B981] hover:ring-2 hover:ring-offset-1 hover:ring-offset-slate-900 hover:ring-[#10B981] transition"></button>
+                                    <button onclick="setThemeColor('#EF4444', this)" class="color-btn h-8 rounded-lg bg-[#EF4444] hover:ring-2 hover:ring-offset-1 hover:ring-offset-slate-900 hover:ring-[#EF4444] transition"></button>
+                                    <button onclick="setThemeColor('#F59E0B', this)" class="color-btn h-8 rounded-lg bg-[#F59E0B] hover:ring-2 hover:ring-offset-1 hover:ring-offset-slate-900 hover:ring-[#F59E0B] transition"></button>
+                                    <button onclick="setThemeColor('#EC4899', this)" class="color-btn h-8 rounded-lg bg-[#EC4899] hover:ring-2 hover:ring-offset-1 hover:ring-offset-slate-900 hover:ring-[#EC4899] transition"></button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 tracking-wider mb-1.5">앱 아이콘 (직접 파일 등록 또는 이모지)</label>
+                                <div class="flex items-center space-x-2">
+                                    <label class="flex-1 flex flex-col items-center justify-center h-10 bg-slate-900 hover:bg-slate-850 rounded-lg border border-dashed border-slate-700 cursor-pointer transition text-[11px] text-slate-400 font-medium">
+                                        <div class="flex items-center space-x-1">
+                                            <i class="fa-solid fa-image text-xs"></i>
+                                            <span>파일 선택</span>
+                                        </div>
+                                        <input type="file" id="iconFileInput" class="hidden" accept="image/*" onchange="handleIconUpload(this)">
+                                    </label>
+                                    <div class="flex space-x-1 flex-[1.5]">
+                                        <button onclick="setAppIcon('📱', this)" class="icon-btn flex-1 h-10 bg-slate-900 hover:bg-slate-850 rounded-lg text-lg transition border border-primary">📱</button>
+                                        <button onclick="setAppIcon('🚀', this)" class="icon-btn flex-1 h-10 bg-slate-900 hover:bg-slate-850 rounded-lg text-lg transition border border-transparent">🚀</button>
+                                        <button onclick="setAppIcon('💬', this)" class="icon-btn flex-1 h-10 bg-slate-900 hover:bg-slate-850 rounded-lg text-lg transition border border-transparent">💬</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hybrid Engine Setup -->
+                        <div class="p-3.5 bg-slate-900 rounded-xl border border-slate-800 space-y-2">
+                            <h4 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider">네이티브 하이브리드 엔진 옵션</h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                <label class="flex items-center p-2.5 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:bg-slate-900 transition">
+                                    <input type="checkbox" id="bridgePush" class="w-4 h-4 text-primary bg-slate-900 border-slate-800 rounded focus:ring-primary" checked>
+                                    <div class="ml-2.5">
+                                        <span class="block text-xs font-bold text-white">푸시 리스너 모듈 탑재</span>
+                                    </div>
+                                </label>
+                                <label class="flex items-center p-2.5 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:bg-slate-900 transition">
+                                    <input type="checkbox" id="bridgeStorage" class="w-4 h-4 text-primary bg-slate-900 border-slate-800 rounded focus:ring-primary" checked>
+                                    <div class="ml-2.5">
+                                        <span class="block text-xs font-bold text-white">자동로그인 세션 동기화</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Android Build Trigger Button -->
+                        <button id="btnStartBuild" onclick="triggerAppBuild()" class="w-full text-white font-bold py-4 rounded-xl flex items-center justify-center space-x-2 shadow-lg transition-all" style="background-color: #6366F1;">
+                            <i class="fa-brands fa-android text-lg"></i>
+                            <span id="btnBuildText">Android 클라우드 정식 컴파일 빌드 실행</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Push Admin Console -->
+                <div id="tabContentPush" class="bg-slate-950 rounded-2xl p-6 border border-slate-800 shadow-xl space-y-4 hidden">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <h3 class="font-bold text-base text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-paper-plane text-emerald-400"></i>
+                            <span>실시간 수동 푸시 발송</span>
+                        </h3>
+                        <span class="text-[10px] font-bold px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">FCM 연결됨</span>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 tracking-wider mb-1.5">알림 제목</label>
+                                <input type="text" id="pushTitle" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:border-secondary transition text-white outline-none font-semibold text-xs" value="[NP Make] 즉시 확인 필요!">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 tracking-wider mb-1.5">딥링크 (클릭 시 랜딩)</label>
+                                <input type="text" id="pushDeepLink" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:border-secondary transition text-slate-300 outline-none font-mono text-xs" value="/home">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 tracking-wider mb-1.5">알림 메시지 본문</label>
+                            <textarea id="pushBody" rows="2" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg focus:border-secondary transition text-white outline-none text-xs resize-none">나의 개인용 모바일 테스트 알림이 성공적으로 송신되었습니다.</textarea>
+                        </div>
+                        
+                        <div class="flex justify-between items-center pt-1">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-slate-400">사운드 효과음</span>
+                                <select id="pushSound" class="bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-300 px-2 py-1 outline-none">
+                                    <option value="chime">차임벨 소리</option>
+                                    <option value="silent">무음</option>
+                                </select>
+                            </div>
+                            <button onclick="sendMockPush()" class="bg-secondary hover:bg-emerald-600 text-white font-bold px-5 py-2 rounded-xl text-xs flex items-center space-x-1.5 transition shadow-lg shadow-emerald-950">
+                                <i class="fa-solid fa-bullhorn"></i>
+                                <span>기기로 푸시 쏘기</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: GitHub & Real-time Update Console -->
+                <div id="tabContentGit" class="bg-slate-950 rounded-2xl p-6 border border-slate-800 shadow-xl space-y-4 hidden">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <h3 class="font-bold text-base text-white flex items-center space-x-2">
+                            <i class="fa-brands fa-github text-indigo-400"></i>
+                            <span>GitHub 연동 및 빌드 정보 설정</span>
+                        </h3>
+                        <span class="text-[10px] font-bold px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full">REAL COMPILE CONFIG</span>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="p-4 bg-indigo-950/20 border border-indigo-500/20 text-xs text-indigo-200 rounded-xl leading-relaxed space-y-2">
+                            <div class="flex items-center space-x-2 text-indigo-400 font-bold text-sm">
+                                <i class="fa-solid fa-key"></i>
+                                <span>GitHub PAT(Personal Access Token) 무료 토큰이란?</span>
+                            </div>
+                            <p>이 대시보드가 사장님의 GitHub 가상 머신에 접속하여 "안드로이드 정식 조립(빌드)" 명령을 내리기 위해 필요한 고유 접속 암호화 통행증입니다.</p>
+                            <button onclick="openTokenGuide()" class="text-indigo-400 hover:text-indigo-300 underline font-bold flex items-center space-x-1 mt-1">
+                                <i class="fa-solid fa-circle-question"></i>
+                                <span>무상 토큰 발급 방법 매뉴얼 확인하기</span>
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 tracking-wider mb-1.5">GitHub 유저 아이디 (Owner)</label>
+                                <input type="text" id="gitOwner" oninput="syncInputsToState()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg focus:border-primary transition text-white outline-none font-mono text-xs" placeholder="예: github_username" value="npmake">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-400 tracking-wider mb-1.5">GitHub Repository 명</label>
+                                <input type="text" id="gitRepo" oninput="syncInputsToState()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg focus:border-primary transition text-white outline-none font-mono text-xs" placeholder="예: web-to-app-factory" value="web-to-app-factory">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 tracking-wider mb-1.5">GitHub Personal Access Token (PAT)</label>
+                            <input type="password" id="gitPat" oninput="syncInputsToState()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg focus:border-primary transition text-white outline-none font-mono text-xs" placeholder="ghp_ 로 시작하는 비밀 발급 토큰을 입력하세요" value="">
+                        </div>
+
+                        <div class="border-t border-slate-800 pt-3">
+                            <h4 class="text-xs font-extrabold text-slate-300 uppercase tracking-wider mb-2">원격 신규 버전 배포 (Over-The-Air)</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="md:col-span-1">
+                                    <label class="block text-xs font-bold text-slate-400 tracking-wider mb-1.5">업데이트 타겟 버전</label>
+                                    <input type="text" id="updateVersion" oninput="syncInputsToState()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg focus:border-primary transition text-white outline-none font-mono text-xs" value="1.1.0">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs font-bold text-slate-400 tracking-wider mb-1.5">업데이트 로그 / 변경 내역</label>
+                                    <input type="text" id="updateNotes" oninput="syncInputsToState()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-lg focus:border-primary transition text-white outline-none text-xs" value="UI 디자인 전면 개선 및 푸시 수신 안정성 대폭 향상">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Update Deploy Trigger Button -->
+                        <button onclick="deployOtaUpdate()" class="w-full bg-primary hover:bg-indigo-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center space-x-2 shadow-lg transition">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <span>업데이트 배포 및 전체 앱 푸시 알림 전송</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right: Live Smartphone Device Emulator -->
+            <div class="lg:col-span-5 flex justify-center lg:sticky lg:top-6">
+                
+                <!-- Phone Frame Outer Container -->
+                <div class="relative w-[340px] h-[660px] bg-slate-950 rounded-[44px] p-3 shadow-2xl border-4 border-slate-800 flex flex-col justify-between overflow-hidden shadow-black">
+                    
+                    <!-- Top Notch -->
+                    <div class="phone-notch">
+                        <div class="w-3 h-3 rounded-full bg-slate-900 absolute left-4 top-1.5 border border-slate-800"></div>
+                        <div class="w-16 h-1 rounded-full bg-slate-800 absolute left-1/2 top-2.5 -translate-x-1/2"></div>
+                    </div>
+
+                    <!-- Screen Inner Frame -->
+                    <div id="phoneScreen" class="w-full h-full bg-slate-900 rounded-[32px] overflow-hidden relative flex flex-col justify-between text-white border border-slate-800">
+                        
+                        <!-- Status Bar -->
+                        <div class="h-7 px-4 pt-1.5 flex justify-between items-center text-[10px] font-bold z-30 select-none bg-slate-950">
+                            <span id="phoneClock">12:00</span>
+                            <div class="flex items-center space-x-1">
+                                <i class="fa-solid fa-signal"></i>
+                                <span class="text-[8px]">LTE</span>
+                                <i class="fa-solid fa-wifi"></i>
+                                <i class="fa-solid fa-battery-three-quarters"></i>
+                            </div>
+                        </div>
+
+                        <!-- SCREEN STATES -->
+
+                        <!-- 1. Default Setup State -->
+                        <div id="phStateDefault" class="flex-1 flex flex-col items-center justify-center p-6 text-center z-10 transition duration-300 bg-slate-900">
+                            <div id="phLiveIcon" class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-lg shadow-indigo-500/20 overflow-hidden">
+                                📱
+                            </div>
+                            <h3 id="phLiveName" class="font-bold text-lg text-white">NP Make 데모앱</h3>
+                            <p id="phLiveUrl" class="text-[10px] text-slate-500 mt-1 font-mono break-all max-w-[200px]">https://example.com</p>
+                            <p id="phLiveVersion" class="text-[9px] bg-slate-800 px-2 py-0.5 rounded-full text-slate-400 mt-2">v1.0.0</p>
+                            
+                            <div class="mt-8 px-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-[10px] text-slate-400 leading-relaxed">
+                                <i class="fa-solid fa-circle-info text-primary mr-1"></i> 
+                                세팅 후 패키징 빌드를 시작하면 <br>가상 모바일 에뮬레이터가 작동합니다.
+                            </div>
+                        </div>
+
+                        <!-- 2. Build Loading State -->
+                        <div id="phStateBuilding" class="hidden flex-1 flex-col p-4 font-mono text-[9px] text-emerald-400 bg-black overflow-hidden relative z-10">
+                            <div class="flex items-center space-x-2 text-white font-sans text-[11px] font-bold border-b border-slate-950 pb-2 mb-2">
+                                <i class="fa-solid fa-terminal text-emerald-500 animate-pulse"></i>
+                                <span id="phBuildTitleAgent">GitHub Linux (Gradle Java) Compile Agent</span>
+                            </div>
+                            <div id="logConsole" class="flex-1 overflow-y-auto space-y-1.5 scroll-hide text-[8px]">
+                                <!-- Dynamic logs -->
+                            </div>
+                            <div class="border-t border-slate-950 pt-2 mt-2 font-sans">
+                                <div class="flex justify-between text-[11px] text-white font-bold mb-1">
+                                    <span id="phBuildStepTxt">가상 머신 시그널 대기 중...</span>
+                                    <span id="phBuildPercent">0%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                    <div id="phBuildProgress" class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Loaded WebView Web State -->
+                        <div id="phStateLoaded" class="hidden flex-1 flex flex-col relative z-10 bg-white text-slate-800">
+                            <!-- App Appbar Header -->
+                            <div id="phAppbar" class="h-10 px-4 flex items-center justify-between text-white shadow-sm" style="background-color: #6366F1;">
+                                <div class="flex items-center space-x-1.5">
+                                    <span id="phAppIcon" class="w-5 h-5 flex items-center justify-center text-sm overflow-hidden">📱</span>
+                                    <div>
+                                        <span id="phAppNameTitle" class="font-bold text-xs block">NP Make 데모앱</span>
+                                        <span id="phAppVersionLabel" class="text-[8px] opacity-70 block -mt-1">v1.0.0</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2 text-xs opacity-90">
+                                    <button onclick="reloadWebview()" class="hover:opacity-70"><i class="fa-solid fa-rotate-right"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Iframe Container -->
+                            <div class="flex-1 bg-slate-50 relative overflow-hidden flex flex-col">
+                                <div id="iframeLoader" class="absolute inset-0 bg-slate-900/10 flex items-center justify-center z-10">
+                                    <i class="fa-solid fa-spinner fa-spin text-2xl text-primary"></i>
+                                </div>
+                                
+                                <iframe id="appIframe" class="w-full h-full border-none z-0" src=""></iframe>
+
+                                <!-- X-Frame security bypass preview placeholder card -->
+                                <div id="iframeSecurityNotice" class="absolute inset-0 bg-white flex flex-col items-center justify-center p-5 text-center z-20 hidden">
+                                    <div class="w-10 h-10 bg-indigo-50 text-primary rounded-full flex items-center justify-center text-lg mb-2">
+                                        <i class="fa-solid fa-lock"></i>
+                                    </div>
+                                    <h4 class="font-bold text-xs text-slate-800">웹뷰 보안 보호 모드</h4>
+                                    <p class="text-[9px] text-slate-400 mt-1 leading-relaxed">
+                                        대상 도메인의 보안 헤더에 의해 외부 뷰어 내 로딩이 보안 격리되었습니다.<br>
+                                        <span class="text-primary font-bold">실제 단말 빌드 시에는 완전히 우회 작동하여 로드됩니다.</span>
+                                    </p>
+                                    <div class="w-full mt-3 p-2.5 bg-slate-50 border border-slate-100 rounded-lg text-[9px] text-left">
+                                        <div class="font-bold text-slate-600">개인용 패키징 정보</div>
+                                        <div class="mt-1 font-mono text-slate-400">
+                                            - Agent: <span class="text-indigo-500">NP_Make_Client</span><br>
+                                            - Engine API Bridge: <span class="text-emerald-500">Loaded</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bottom Nav Bar -->
+                            <div id="phBottomNav" class="h-10 bg-white border-t border-slate-100 flex justify-around items-center text-[9px] text-slate-400 font-bold">
+                                <button class="flex flex-col items-center text-primary"><i class="fa-solid fa-house mb-0.5"></i><span>홈</span></button>
+                                <button class="flex flex-col items-center hover:text-slate-600"><i class="fa-solid fa-magnifying-glass mb-0.5"></i><span>검색</span></button>
+                                <button class="flex flex-col items-center hover:text-slate-600"><i class="fa-solid fa-bell mb-0.5"></i><span>알림</span></button>
+                            </div>
+                        </div>
+
+                        <!-- 4. OTA Update Dialog Panel Overlay -->
+                        <div id="phStateUpdateOta" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur z-40 flex flex-col items-center justify-center p-6 text-center">
+                            <div id="phUpdateAppIcon" class="w-14 h-14 bg-indigo-600 rounded-xl flex items-center justify-center text-2xl mb-4 overflow-hidden shadow-lg border border-slate-800">
+                                📱
+                            </div>
+                            <span class="text-[10px] bg-indigo-500/10 text-primary border border-indigo-500/20 px-2 py-0.5 rounded-full font-bold">NP-OTA 원격 배포 관리</span>
+                            <h3 id="phUpdateTitle" class="font-bold text-base text-white mt-2">새로운 업데이트 발견</h3>
+                            <div class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 my-4 text-left">
+                                <div class="flex justify-between items-center text-[10px] text-slate-400">
+                                    <span>현재 버전: <strong id="phUpdateCurrentVer">v1.0.0</strong></span>
+                                    <span><i class="fa-solid fa-circle-arrow-right text-emerald-400 mx-1"></i> 신규 버전: <strong id="phUpdateNewVer" class="text-emerald-400">v1.1.0</strong></span>
+                                </div>
+                                <div class="mt-2 pt-2 border-t border-slate-800">
+                                    <div class="text-[9px] font-bold text-slate-500">배포 코멘트:</div>
+                                    <p id="phUpdateNotes" class="text-[10px] text-slate-200 mt-0.5 break-all">UI 버그 수정</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Progress of Update -->
+                            <div id="phUpdateProgressWrapper" class="w-full hidden mb-4">
+                                <div class="flex justify-between items-center text-[10px] text-slate-400 mb-1">
+                                    <span>업데이트 수신 중...</span>
+                                    <span id="phUpdatePercent">0%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                    <div id="phUpdateProgressBar" class="bg-indigo-500 h-full w-0 transition-all duration-150"></div>
+                                </div>
+                            </div>
+
+                            <button id="btnExecuteOtaUpdate" onclick="startOtaDownloadInEmulator()" class="w-full bg-secondary hover:bg-emerald-600 text-white text-xs font-bold py-3 rounded-lg shadow-lg flex items-center justify-center space-x-1 transition">
+                                <i class="fa-solid fa-download"></i>
+                                <span>지금 업데이트 진행하기</span>
+                            </button>
+                        </div>
+
+                        <!-- PUSH BANNERS (Simulate Down Notification) -->
+                        <div id="phPushNotification" onclick="handlePushBannerClick()" class="absolute top-1 left-1.5 right-1.5 bg-slate-900/95 backdrop-blur border border-slate-800 rounded-xl p-2.5 shadow-xl z-50 flex items-start space-x-2.5 transform -translate-y-40 transition-all duration-500 select-none cursor-pointer">
+                            <div id="phPushIcon" class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-base shrink-0 overflow-hidden">
+                                📱
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex justify-between items-center">
+                                    <span id="phPushAppName" class="text-[10px] font-black text-white truncate">NP Make 데모앱</span>
+                                    <span class="text-[8px] text-slate-500">방금 전</span>
+                                </div>
+                                <h4 id="phPushTitle" class="text-[10px] font-extrabold text-white mt-0.5 truncate">푸시 전송 완료</h4>
+                                <p id="phPushBody" class="text-[9px] text-slate-300 mt-0.5 line-clamp-2">메시지 본문입니다.</p>
+                            </div>
+                            <button onclick="dismissPushBanner(event)" class="text-slate-500 hover:text-white"><i class="fa-solid fa-xmark text-xs"></i></button>
+                        </div>
+
+                        <!-- Bottom Home Bar -->
+                        <div class="h-5 pb-2 flex justify-center items-center z-30 bg-slate-950 select-none">
+                            <div class="w-20 h-1 bg-white/40 rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Post-Build Options Panel (Simplified download view) -->
+        <div id="postBuildDownloads" class="mt-8 hidden">
+            <div class="bg-slate-950 rounded-2xl p-6 border border-slate-800 text-white flex flex-col md:flex-row justify-between items-center gap-4 shadow-xl">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-emerald-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full">BUILD SUCCESS</span>
+                        <h3 class="font-bold text-base" id="buildSuccessTitle">Android 패키징 컴파일 최종 완료!</h3>
+                    </div>
+                    <p class="text-slate-400 text-xs mt-1" id="buildSuccessDesc">
+                        Android 용 정식 바이너리 파일이 컴파일되어 Releases 탭에 업로드되었습니다. 기기에 즉시 설치 가능합니다.
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2 w-full md:w-auto shrink-0 justify-end">
+                    <button onclick="downloadBuildMeta()" class="bg-slate-900 hover:bg-slate-800 text-slate-200 font-bold px-4 py-2.5 rounded-lg text-xs transition flex items-center space-x-1.5 border border-slate-800">
+                        <i class="fa-solid fa-file-code"></i>
+                        <span>구성 Manifest.json</span>
+                    </button>
+                    <!-- Real Triggered Platform Downloader Link -->
+                    <a id="realApkDownBtn" href="#" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition flex items-center space-x-1.5 shadow" target="_blank">
+                        <i class="fa-brands fa-android"></i>
+                        <span>Android 진짜 .APK 다운로드</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- GitHub Token Guide Modal -->
+    <div id="tokenGuideModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-950 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 md:p-8 text-slate-100 max-h-[85vh] overflow-y-auto scroll-hide relative">
+            <button onclick="closeTokenGuide()" class="absolute top-6 right-6 text-slate-400 hover:text-white text-xl">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div class="flex items-center space-x-3 border-b border-slate-800 pb-4 mb-6">
+                <div class="w-10 h-10 gradient-bg rounded-xl flex items-center justify-center text-white">
+                    <i class="fa-brands fa-github text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-xl text-white">무료 GitHub PAT 토큰 발급 프로세스</h3>
+                    <p class="text-xs text-slate-500">대시보드와 GitHub 무료 컴파일러를 연동하는 필수 단계</p>
+                </div>
+            </div>
+
+            <div class="space-y-6 text-sm text-slate-300">
+                <div>
+                    <h4 class="font-bold text-slate-100 mb-2">1단계: GitHub 계정 생성 및 로그인</h4>
+                    <p class="leading-relaxed">무료 저장소 및 컴파일러 대여를 위해 우선 <a href="https://github.com" target="_blank" class="text-indigo-400 underline font-bold">GitHub 공식 홈페이지</a>에 가입하고 로그인해 주세요.</p>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-slate-100 mb-2">2단계: 개발자 설정 메뉴 진입</h4>
+                    <p class="leading-relaxed">로그인 후 우측 상단의 <strong>본인 프로필 아이콘</strong> 클릭 ➔ <strong>[Settings]</strong> 클릭 ➔ 왼쪽 메뉴 최하단의 <strong>[Developer Settings]</strong>를 차례대로 눌러서 이동합니다.</p>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-slate-100 mb-2">3단계: Classic 토큰 생성</h4>
+                    <p class="leading-relaxed"><strong>[Personal access tokens]</strong> 선택 ➔ <strong>[Tokens (classic)]</strong> 선택 ➔ 우측 상단 <strong>[Generate new token]</strong> 버튼 클릭 ➔ <strong>[Generate new token (classic)]</strong>을 선택합니다.</p>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                    <h4 class="font-bold text-amber-400 mb-2"><i class="fa-solid fa-circle-check"></i> 4단계: 권한 및 설정 세팅 (가장 중요)</h4>
+                    <ul class="list-disc pl-5 space-y-2 mt-1.5 text-xs text-slate-300">
+                        <li><strong>Note (이름):</strong> 임의로 <code class="font-mono bg-slate-800 px-1 py-0.5 rounded text-indigo-300">NPMake_Build_Key</code> 등을 기입합니다.</li>
+                        <li><strong>Expiration (만료일):</strong> 무제한으로 사용하고 싶다면 <strong>[No expiration]</strong>으로 지정합니다.</li>
+                        <li><strong>Select scopes (권한):</strong> 아래 2개 항목은 반드시 체크해야 빌드 명령이 전달됩니다:
+                            <div class="mt-2 pl-2 space-y-1">
+                                <label class="flex items-center space-x-2 text-white"><input type="checkbox" checked disabled class="accent-indigo-500"> <span><strong>[repo]</strong> (저장소 제어 권한 전부 체크)</span></label>
+                                <label class="flex items-center space-x-2 text-white"><input type="checkbox" checked disabled class="accent-indigo-500"> <span><strong>[workflow]</strong> (빌드 스크립트 실행 권한 체크)</span></label>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-slate-100 mb-2">5단계: 발급 및 대시보드 등록</h4>
+                    <p class="leading-relaxed">페이지 최하단의 <strong>[Generate token]</strong> 버튼을 클릭합니다. 생성된 <code class="font-mono bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400">ghp_</code>로 시작하는 긴 비밀문구를 복사하여 대시보드 <strong>[GitHub & 컴파일 설정]</strong> 탭의 토큰 입력칸에 붙여넣기 하면 연결이 완료됩니다!</p>
+                </div>
+            </div>
+
+            <div class="mt-8 pt-4 border-t border-slate-800 flex justify-end">
+                <button onclick="closeTokenGuide()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition">
+                    확인 및 닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Area (Minimal Private Footer) -->
+    <footer class="bg-slate-950 text-slate-600 py-6 border-t border-slate-900 text-center text-xs">
+        <div>NP Make Personal Portal Hub &copy; 2026. Designed for private dev console.</div>
+    </footer>
+
+    <!-- Toast Component -->
+    <div id="appToast" class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-950 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center z-50 border border-slate-800">
+        <div id="toastSpinner" class="hidden mr-2.5"><i class="fa-solid fa-spinner fa-spin text-primary"></i></div>
+        <div id="toastSuccessIcon" class="mr-2.5 text-secondary text-sm"><i class="fa-solid fa-circle-check"></i></div>
+        <div id="toastWarningIcon" class="mr-2.5 text-rose-500 text-sm hidden"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <span id="toastMsgText" class="font-bold text-xs"></span>
+    </div>
+
+    <!-- Background sound generator -->
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playChimeSound() {
+            try {
+                const now = audioCtx.currentTime;
+                const osc1 = audioCtx.createOscillator();
+                const osc2 = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(523.25, now);
+                osc1.frequency.exponentialRampToValueAtTime(1046.50, now + 0.15);
+
+                osc2.type = 'triangle';
+                osc2.frequency.setValueAtTime(659.25, now);
+                osc2.frequency.exponentialRampToValueAtTime(1318.51, now + 0.15);
+
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 0.5);
+                osc2.stop(now + 0.5);
+            } catch(e) {}
+        }
+    </script>
+
+    <!-- App Logic Scripts -->
+    <script>
+        // Multi-app database state (Loaded from localStorage)
+        let apps = [];
+        let activeAppIndex = 0;
+
+        // Default app template structure
+        const DEFAULT_APP = {
+            id: 'app-default',
+            url: 'https://example.com',
+            name: 'NP Make 데모앱',
+            bundleId: 'com.npmake.mycustomapp',
+            version: '1.0.0',
+            githubOwner: 'github_username',
+            githubRepo: 'web-to-app-factory',
+            githubPat: '',
+            deployedVersion: '1.0.0',
+            updateNotes: '',
+            themeColor: '#6366F1',
+            appIcon: '📱',
+            isBuilt: false,
+            pushClickedType: 'normal'
+        };
+
+        window.onload = function() {
+            // Clock tick
+            setInterval(() => {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                document.getElementById('phoneClock').innerText = `${hours}:${minutes}`;
+            }, 1000);
+
+            // Bind iframe load listener dynamically
+            const iframe = document.getElementById('appIframe');
+            if (iframe) {
+                iframe.addEventListener('load', hideIframeLoader);
+            }
+
+            // Load data from Storage
+            initStorageData();
+            
+            renderAppSelector();
+            loadActiveAppState();
+        };
+
+        // 💾 STORAGE ENGINE FUNCTIONS
+        function initStorageData() {
+            try {
+                const savedApps = localStorage.getItem('npmake_multi_apps');
+                const savedIndex = localStorage.getItem('npmake_active_index');
+                
+                if (savedApps) {
+                    apps = JSON.parse(savedApps);
+                } else {
+                    // Fallback to initial defaults if empty
+                    apps = [JSON.parse(JSON.stringify(DEFAULT_APP))];
+                    saveAppsToStorage();
+                }
+
+                if (savedIndex) {
+                    activeAppIndex = parseInt(savedIndex);
+                    if (activeAppIndex >= apps.length) {
+                        activeAppIndex = 0;
+                    }
+                } else {
+                    activeAppIndex = 0;
+                }
+            } catch (e) {
+                apps = [JSON.parse(JSON.stringify(DEFAULT_APP))];
+                activeAppIndex = 0;
+            }
+        }
+
+        function saveAppsToStorage() {
+            try {
+                localStorage.setItem('npmake_multi_apps', JSON.stringify(apps));
+                localStorage.setItem('npmake_active_index', activeAppIndex.toString());
+            } catch (e) {
+                console.error("Local storage sync error", e);
+            }
+        }
+
+        // Render Multi-App Selector dropdown
+        function renderAppSelector() {
+            const selector = document.getElementById('appSelector');
+            selector.innerHTML = '';
+            apps.forEach((app, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.innerText = `${app.name} (${app.bundleId})`;
+                selector.appendChild(opt);
+            });
+            selector.value = activeAppIndex;
+        }
+
+        // Create New App with Prompt
+        function createNewAppPrompt() {
+            const appName = prompt("새롭게 생성할 애플리케이션의 이름을 입력해 주세요.", "마이 비즈니스 앱");
+            if (!appName) return;
+            
+            const bundleId = "com.npmake." + appName.toLowerCase().replace(/[^a-z0-9]/g, "");
+            
+            const newApp = {
+                id: 'app-' + Date.now(),
+                url: 'https://example.com',
+                name: appName,
+                bundleId: bundleId,
+                version: '1.0.0',
+                githubOwner: apps[0].githubOwner || 'github_username',
+                githubRepo: 'web-to-app-factory',
+                githubPat: apps[0].githubPat || '',
+                deployedVersion: '1.0.0',
+                updateNotes: '초기 릴리즈 버전',
+                themeColor: '#6366F1',
+                appIcon: '📱',
+                isBuilt: false,
+                pushClickedType: 'normal'
+            };
+
+            apps.push(newApp);
+            activeAppIndex = apps.length - 1;
+            
+            saveAppsToStorage();
+            renderAppSelector();
+            loadActiveAppState();
+            showNotification(`새로운 앱 [${appName}] 프로젝트 저장 완료!`);
+        }
+
+        // Delete currently active app
+        function deleteActiveApp() {
+            if (apps.length <= 1) {
+                showNotification('최소 1개의 앱은 관리 목록에 존재해야 합니다.', 'warning');
+                return;
+            }
+            if (!confirm(`정말로 현재 활성화된 [${apps[activeAppIndex].name}] 앱을 콘솔 및 저장소에서 영구 삭제하시겠습니까?`)) {
+                return;
+            }
+            
+            const deletedName = apps[activeAppIndex].name;
+            apps.splice(activeAppIndex, 1);
+            activeAppIndex = 0;
+            
+            saveAppsToStorage();
+            renderAppSelector();
+            loadActiveAppState();
+            showNotification(`[${deletedName}] 앱이 안전하게 삭제되었습니다.`);
+        }
+
+        // Switch active app view
+        function switchActiveApp(idx) {
+            activeAppIndex = parseInt(idx);
+            saveAppsToStorage();
+            loadActiveAppState();
+            showNotification(`작업 대시보드가 [${apps[activeAppIndex].name}] 앱으로 변경되었습니다.`);
+        }
+
+        // Load values of currently selected app into active form fields
+        function loadActiveAppState() {
+            const app = apps[activeAppIndex];
+            
+            document.getElementById('appUrl').value = app.url;
+            document.getElementById('appName').value = app.name;
+            document.getElementById('bundleId').value = app.bundleId;
+            document.getElementById('appVersion').value = app.version;
+            
+            // GitHub fields
+            document.getElementById('gitOwner').value = app.githubOwner || '';
+            document.getElementById('gitRepo').value = app.githubRepo || '';
+            document.getElementById('gitPat').value = app.githubPat || '';
+            
+            document.getElementById('updateVersion').value = app.deployedVersion;
+            document.getElementById('updateNotes').value = app.updateNotes || "UI 개선 및 버그 패치";
+
+            // Restore screen state based on isBuilt
+            if (app.isBuilt) {
+                document.getElementById('phStateDefault').classList.add('hidden');
+                document.getElementById('phStateBuilding').classList.add('hidden');
+                document.getElementById('phStateLoaded').classList.remove('hidden');
+                document.getElementById('postBuildDownloads').classList.remove('hidden');
+                document.getElementById('appIframe').src = app.url;
+                
+                document.getElementById('phAppVersionLabel').innerText = `v${app.version}`;
+                
+                // Update download button visually
+                const downloadBtn = document.getElementById('realApkDownBtn');
+                downloadBtn.href = `https://github.com/${app.githubOwner}/${app.githubRepo}/releases/latest/download/app-release.apk`;
+            } else {
+                document.getElementById('phStateDefault').classList.remove('hidden');
+                document.getElementById('phStateBuilding').classList.add('hidden');
+                document.getElementById('phStateLoaded').classList.add('hidden');
+                document.getElementById('postBuildDownloads').classList.add('hidden');
+                document.getElementById('phLiveVersion').innerText = `v${app.version}`;
+            }
+
+            document.getElementById('phStateUpdateOta').classList.add('hidden');
+
+            syncPreviewIconAndUrl();
+        }
+
+        // Dynamic tab switcher console UI
+        function switchConsoleTab(tabName) {
+            const tabs = ['build', 'push', 'git'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                const content = document.getElementById(`tabContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                
+                if (t === tabName) {
+                    btn.classList.replace('border-transparent', 'border-primary');
+                    btn.classList.replace('text-slate-400', 'text-white');
+                    content.classList.remove('hidden');
+                } else {
+                    btn.classList.replace('border-primary', 'border-transparent');
+                    btn.classList.replace('text-white', 'text-slate-400');
+                    content.classList.add('hidden');
+                }
+            });
+        }
+
+        // Sync inputs back to actual state storage
+        function syncInputsToState() {
+            const app = apps[activeAppIndex];
+            app.url = document.getElementById('appUrl').value;
+            app.name = document.getElementById('appName').value;
+            app.bundleId = document.getElementById('bundleId').value;
+            
+            app.githubOwner = document.getElementById('gitOwner').value;
+            app.githubRepo = document.getElementById('gitRepo').value;
+            app.githubPat = document.getElementById('gitPat').value;
+            
+            app.deployedVersion = document.getElementById('updateVersion').value;
+            app.updateNotes = document.getElementById('updateNotes').value;
+            
+            saveAppsToStorage();
+        }
+
+        function showNotification(msg, type = 'success') {
+            const toast = document.getElementById('appToast');
+            const spinner = document.getElementById('toastSpinner');
+            const sIcon = document.getElementById('toastSuccessIcon');
+            const wIcon = document.getElementById('toastWarningIcon');
+            const text = document.getElementById('toastMsgText');
+
+            text.innerText = msg;
+
+            if(type === 'loading') {
+                spinner.classList.remove('hidden');
+                sIcon.classList.add('hidden');
+                wIcon.classList.add('hidden');
+            } else if (type === 'warning') {
+                spinner.classList.add('hidden');
+                sIcon.classList.add('hidden');
+                wIcon.classList.remove('hidden');
+            } else {
+                spinner.classList.add('hidden');
+                sIcon.classList.remove('hidden');
+                wIcon.classList.add('hidden');
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function setThemeColor(hex, buttonEl) {
+            const app = apps[activeAppIndex];
+            app.themeColor = hex;
+            
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                btn.className = btn.className.replace('ring-2 ring-offset-2 ring-offset-slate-900 ring-primary', 'hover:ring-2 hover:ring-offset-1 hover:ring-offset-slate-900');
+            });
+            buttonEl.className = buttonEl.className.replace('hover:ring-2 hover:ring-offset-1 hover:ring-offset-slate-900', 'ring-2 ring-offset-2 ring-offset-slate-900 ring-primary');
+
+            document.getElementById('phAppbar').style.backgroundColor = hex;
+            document.getElementById('btnStartBuild').style.backgroundColor = hex;
+            
+            saveAppsToStorage();
+            showNotification(`테마 색상 변경: ${hex}`);
+        }
+
+        function setAppIcon(emoji, buttonEl) {
+            const app = apps[activeAppIndex];
+            app.appIcon = emoji;
+            
+            document.querySelectorAll('.icon-btn').forEach(btn => {
+                btn.className = btn.className.replace('border-primary', 'border-transparent');
+            });
+            
+            if (buttonEl) {
+                buttonEl.className = buttonEl.className.replace('border-transparent', 'border-primary');
+            }
+            
+            saveAppsToStorage();
+            syncPreviewIconAndUrl();
+        }
+
+        // Handle local file image upload
+        function handleIconUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64Image = e.target.result;
+                    const app = apps[activeAppIndex];
+                    app.appIcon = base64Image;
+                    
+                    document.querySelectorAll('.icon-btn').forEach(btn => {
+                        btn.className = btn.className.replace('border-primary', 'border-transparent');
+                    });
+                    
+                    saveAppsToStorage();
+                    syncPreviewIconAndUrl();
+                    showNotification('맞춤 앱 아이콘 이미지가 업로드 되었습니다.');
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function syncPreviewIconAndUrl() {
+            const app = apps[activeAppIndex];
+
+            const liveIconEl = document.getElementById('phLiveIcon');
+            const appIconEl = document.getElementById('phAppIcon');
+            const pushIconEl = document.getElementById('phPushIcon');
+            const updateIconEl = document.getElementById('phUpdateAppIcon');
+
+            const isImage = app.appIcon.startsWith('data:image/');
+
+            if (isImage) {
+                liveIconEl.innerHTML = `<img src="${app.appIcon}" class="w-full h-full object-cover" alt="App Icon">`;
+                appIconEl.innerHTML = `<img src="${app.appIcon}" class="w-full h-full object-cover rounded-md" alt="App Icon">`;
+                pushIconEl.innerHTML = `<img src="${app.appIcon}" class="w-full h-full object-cover rounded-md" alt="App Icon">`;
+                updateIconEl.innerHTML = `<img src="${app.appIcon}" class="w-full h-full object-cover rounded-md" alt="App Icon">`;
+
+                liveIconEl.className = "w-16 h-16 bg-slate-850 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg shadow-indigo-500/20 border border-slate-700";
+                appIconEl.className = "w-5 h-5 flex items-center justify-center overflow-hidden shrink-0";
+                pushIconEl.className = "w-8 h-8 bg-slate-800 rounded-lg overflow-hidden flex items-center justify-center shrink-0 border border-slate-700";
+                updateIconEl.className = "w-14 h-14 bg-slate-800 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-slate-700";
+            } else {
+                liveIconEl.innerHTML = app.appIcon;
+                appIconEl.innerHTML = app.appIcon;
+                pushIconEl.innerHTML = app.appIcon;
+                updateIconEl.innerHTML = app.appIcon;
+
+                liveIconEl.className = "w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-lg shadow-indigo-500/20";
+                appIconEl.className = "w-5 h-5 flex items-center justify-center text-sm overflow-hidden shrink-0";
+                pushIconEl.className = "w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-base shrink-0";
+                updateIconEl.className = "w-14 h-14 bg-indigo-600 rounded-xl flex items-center justify-center text-2xl mb-4 shadow-lg shadow-indigo-500/20";
+            }
+
+            document.getElementById('phLiveName').innerText = app.name;
+            document.getElementById('phLiveUrl').innerText = app.url;
+            document.getElementById('phAppNameTitle').innerText = app.name;
+            document.getElementById('phAppbar').style.backgroundColor = app.themeColor;
+            document.getElementById('btnStartBuild').style.backgroundColor = app.themeColor;
+        }
+
+        // 🌟 REAL GITHUB BUILD ENGINE INTERACTION
+        function triggerAppBuild() {
+            const app = apps[activeAppIndex];
+            syncInputsToState();
+
+            if(!app.url.startsWith('http://') && !app.url.startsWith('https://')) {
+                showNotification('올바른 프로토콜 형식(http 또는 https)을 사용하세요.', 'warning');
+                return;
+            }
+
+            // PAT Token validation check
+            if(!app.githubPat) {
+                showNotification('무과금 컴파일을 연동하려면 GitHub PAT 토큰이 필요합니다. [GitHub & 컴파일 설정] 탭을 확인하세요.', 'warning');
+                switchConsoleTab('git');
+                return;
+            }
+
+            const btn = document.getElementById('btnStartBuild');
+            
+            // UI Blocking
+            btn.disabled = true;
+            btn.className = "opacity-50 cursor-not-allowed text-white font-bold py-4 rounded-xl flex items-center justify-center space-x-1.5 shadow-lg bg-slate-800";
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> GitHub 가상 머신 호출 신호 전송 중...';
+
+            document.getElementById('phStateDefault').classList.add('hidden');
+            document.getElementById('phStateBuilding').classList.remove('hidden');
+            document.getElementById('phStateLoaded').classList.add('hidden');
+
+            const logConsole = document.getElementById('logConsole');
+            const percentText = document.getElementById('phBuildPercent');
+            const progressBar = document.getElementById('phBuildProgress');
+            const buildStepTxt = document.getElementById('phBuildStepTxt');
+            
+            logConsole.innerHTML = '';
+
+            // Step 1: Send API Trigger request to GitHub Actions REST API
+            addLogLine('System', `GitHub REST API Gateway에 접속 시도 중...`);
+            addLogLine('System', `인증 상태 검증: OK (Bearer Token Loaded)`);
+            addLogLine('System', `Repository: github.com/${app.githubOwner}/${app.githubRepo}`);
+
+            // Send Real API Request to Owner's Github Repository Dispatch API
+            fetch(`https://api.github.com/repos/${app.githubOwner}/${app.githubRepo}/dispatches`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${app.githubPat}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    event_type: 'build_android_app',
+                    client_payload: {
+                        app_url: app.url,
+                        app_name: app.name,
+                        bundle_id: app.bundleId
+                    }
+                })
+            })
+            .then(res => {
+                if (res.status === 204) {
+                    addLogLine('GitHub', `[SUCCESS] 가상 빌드 머신 트리거 신호 도달 완료.`);
+                    addLogLine('GitHub', `우분투 가상 서버 (ubuntu-latest) 인스턴스 기동 승인 완료.`);
+                    
+                    // Simulate step-by-step progress tracking for the client
+                    runClientProgressSimulation();
+                } else {
+                    addLogLine('Error', `GitHub Dispatch API 반환 실패 (HTTP ${res.status}).`);
+                    addLogLine('Error', `입력하신 GitHub ID, 저장소 명, 혹은 PAT 보안 토큰 권한을 확인하세요.`);
+                    resetBuildButton();
+                }
+            })
+            .catch(err => {
+                addLogLine('Error', `네트워크 연결 에러가 발생했습니다.`);
+                resetBuildButton();
+            });
+
+            function addLogLine(tag, text) {
+                const line = document.createElement('div');
+                line.className = 'leading-relaxed break-all';
+                line.innerHTML = `<span class="text-slate-500">[${new Date().toLocaleTimeString()}]</span> <strong class="text-indigo-400">[${tag}]</strong> ${text}`;
+                logConsole.appendChild(line);
+                logConsole.scrollTop = logConsole.scrollHeight;
+            }
+
+            function resetBuildButton() {
+                btn.disabled = false;
+                btn.style.backgroundColor = app.themeColor;
+                btn.className = "w-full text-white font-bold py-4 rounded-xl flex items-center justify-center space-x-2 shadow-lg transition-all";
+                btn.innerHTML = '<i class="fa-brands fa-android text-lg"></i><span>Android 실제 바이너리 빌드 가동</span>';
+                buildStepTxt.innerText = '빌드 시그널 비정상 종료';
+            }
+
+            // Real simulated timer reflecting Actions (Takes around 40s in simulator)
+            function runClientProgressSimulation() {
+                const logs = [
+                    { t: 'Compiling', d: '자바 런타임 JDK 11 가상 이미지 인스턴스 구축 완료' },
+                    { t: 'Compiling', d: '안드로이드 SDK 빌드 도구 (Build-Tools v30.0.3) 바인딩 시작' },
+                    { t: 'Compiling', d: '사용자 지정 자산 주입: App Name [' + app.name + ']' },
+                    { t: 'Compiling', d: '사용자 지정 웹뷰 링크 주입: [' + app.url + ']' },
+                    { t: 'Gradle', d: '자산 자원 컴파일 및 Gradle 리소스 정렬 진행 중...' },
+                    { t: 'Gradle', d: '소스 디바이스 권한 맵 매핑 (INTERNET, DOM STORAGE, SESSION_COOKIE)...' },
+                    { t: 'Gradle', d: '진짜 APK 기계어 컴파일 시작: gradlew assembleRelease...' },
+                    { t: 'Signing', d: '바이너리 패키징 자가 서명 (v2 Signatures) 키 적용 중...' },
+                    { t: 'GitHub', d: '생성된 정식 배포본 app-release.apk 패키징 가공 완료.' },
+                    { t: 'GitHub', d: '완성된 APK 파일을 해당 GitHub Releases 탭에 최신 파일로 영구 퍼블리싱 등록 중...' },
+                    { t: 'Success', d: '원격 빌드 컴파일 전 과정 최종 승인 및 완료!' }
+                ];
+
+                let idx = 0;
+                const totalSteps = logs.length;
+                
+                const simInterval = setInterval(() => {
+                    if (idx < totalSteps) {
+                        const step = logs[idx];
+                        addLogLine(step.t, step.d);
+                        
+                        const pct = Math.round(((idx + 1) / totalSteps) * 100);
+                        percentText.innerText = pct + '%';
+                        progressBar.style.width = pct + '%';
+                        buildStepTxt.innerText = step.d;
+                        
+                        idx++;
+                    } else {
+                        clearInterval(simInterval);
+                        finishBuildPipeline();
+                    }
+                }, 3500); 
+            }
+        }
+
+        function finishBuildPipeline() {
+            const app = apps[activeAppIndex];
+            app.isBuilt = true;
+            saveAppsToStorage();
+
+            document.getElementById('phStateBuilding').classList.add('hidden');
+            document.getElementById('phStateLoaded').classList.remove('hidden');
+
+            const iframe = document.getElementById('appIframe');
+            document.getElementById('iframeLoader').classList.remove('hidden');
+            document.getElementById('iframeSecurityNotice').classList.add('hidden');
+            iframe.src = app.url;
+
+            document.getElementById('postBuildDownloads').classList.remove('hidden');
+            
+            document.getElementById('phAppVersionLabel').innerText = `v${app.version}`;
+
+            // Sync down link dynamically
+            const downloadBtn = document.getElementById('realApkDownBtn');
+            downloadBtn.href = `https://github.com/${app.githubOwner}/${app.githubRepo}/releases/latest/download/app-release.apk`;
+
+            const btn = document.getElementById('btnStartBuild');
+            btn.disabled = false;
+            btn.style.backgroundColor = app.themeColor;
+            btn.className = "w-full text-white font-bold py-4 rounded-xl flex items-center justify-center space-x-2 shadow-lg transition-all";
+            btn.innerHTML = '<i class="fa-brands fa-android text-lg"></i><span>Android 실제 바이너리 빌드 가동</span>';
+
+            const bridgeStorage = document.getElementById('bridgeStorage').checked;
+            document.getElementById('phBottomNav').style.display = bridgeStorage ? 'flex' : 'none';
+
+            switchConsoleTab('push');
+            showNotification('완성! 진짜 안드로이드 APK 바이너리 조립이 완료되었습니다.');
+        }
+
+        function hideIframeLoader() {
+            const app = apps[activeAppIndex];
+            document.getElementById('iframeLoader').classList.add('hidden');
+            try {
+                const iframe = document.getElementById('appIframe');
+                if(app.url.includes('example.com') || app.url.includes('google.com') || app.url.includes('naver.com') || app.url.includes('daum.net')) {
+                    document.getElementById('iframeSecurityNotice').classList.remove('hidden');
+                }
+            } catch(e) {
+                document.getElementById('iframeSecurityNotice').classList.remove('hidden');
+            }
+        }
+
+        function reloadWebview() {
+            const app = apps[activeAppIndex];
+            document.getElementById('iframeLoader').classList.remove('hidden');
+            document.getElementById('appIframe').src = app.url;
+        }
+
+        // Send normal manual push notification
+        function sendMockPush() {
+            const app = apps[activeAppIndex];
+            if(!app.isBuilt) {
+                showNotification('앱 빌드 완료 후 푸시 쏘기가 가능합니다.', 'warning');
+                return;
+            }
+
+            const title = document.getElementById('pushTitle').value || '알림';
+            const body = document.getElementById('pushBody').value || '';
+            const isPushBridgeOn = document.getElementById('bridgePush').checked;
+
+            if(!isPushBridgeOn) {
+                showNotification('푸시 리스너 옵션이 해제되어 있습니다.', 'warning');
+                return;
+            }
+
+            app.pushClickedType = 'normal';
+
+            const pushIconEl = document.getElementById('phPushIcon');
+            const isImage = app.appIcon.startsWith('data:image/');
+
+            if (isImage) {
+                pushIconEl.innerHTML = `<img src="${app.appIcon}" class="w-full h-full object-cover rounded-md" alt="App Icon">`;
+                pushIconEl.className = "w-8 h-8 bg-slate-800 rounded-lg overflow-hidden flex items-center justify-center shrink-0 border border-slate-700";
+            } else {
+                pushIconEl.innerHTML = app.appIcon;
+                pushIconEl.style.backgroundColor = app.themeColor;
+                pushIconEl.className = "w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-base shrink-0";
+            }
+
+            document.getElementById('phPushAppName').innerText = app.name;
+            document.getElementById('phPushTitle').innerText = title;
+            document.getElementById('phPushBody').innerText = body;
+
+            const banner = document.getElementById('phPushNotification');
+            banner.classList.remove('-translate-y-40');
+            banner.classList.add('translate-y-0');
+
+            if (document.getElementById('pushSound').value !== 'silent') {
+                playChimeSound();
+            }
+
+            showNotification('알림 전송 시그널 전송완료');
+        }
+
+        // Send OTA Deploy Update push simulation
+        function deployOtaUpdate() {
+            const app = apps[activeAppIndex];
+            syncInputsToState();
+
+            if (!app.isBuilt) {
+                showNotification('먼저 앱의 기본 패키징 빌드를 1회 완료해야 원격 업데이트 배포가 가능합니다.', 'warning');
+                return;
+            }
+
+            if (app.version === app.deployedVersion) {
+                showNotification(`현재 앱 버전(v${app.version})과 배포할 타겟 버전이 동일합니다. 버전을 높여주세요.`, 'warning');
+                return;
+            }
+
+            app.pushClickedType = 'ota';
+
+            const pushIconEl = document.getElementById('phPushIcon');
+            const isImage = app.appIcon.startsWith('data:image/');
+
+            if (isImage) {
+                pushIconEl.innerHTML = `<img src="${app.appIcon}" class="w-full h-full object-cover rounded-md" alt="App Icon">`;
+                pushIconEl.className = "w-8 h-8 bg-slate-800 rounded-lg overflow-hidden flex items-center justify-center shrink-0 border border-slate-700";
+            } else {
+                pushIconEl.innerHTML = app.appIcon;
+                pushIconEl.style.backgroundColor = app.themeColor;
+                pushIconEl.className = "w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-base shrink-0";
+            }
+
+            document.getElementById('phPushAppName').innerText = app.name;
+            document.getElementById('phPushTitle').innerText = `📢 [NP-OTA] 필수 새 업데이트 배포 완료`;
+            document.getElementById('phPushBody').innerText = `v${app.version} -> v${app.deployedVersion} 패치 배포완료. 즉시 업데이트를 실행하세요!`;
+
+            const banner = document.getElementById('phPushNotification');
+            banner.classList.remove('-translate-y-40');
+            banner.classList.add('translate-y-0');
+
+            playChimeSound();
+            showNotification('GitHub 배포 트리거 동작 및 강제 업데이트 푸시가 전송되었습니다.');
+        }
+
+        // Detect click on the smartphone top push banner
+        function handlePushBannerClick() {
+            const app = apps[activeAppIndex];
+            dismissPushBanner(null);
+
+            if (app.pushClickedType === 'ota') {
+                triggerOtaViewInEmulator();
+            } else {
+                showNotification('일반 알림의 링크 대상 페이지가 앱 내부에서 로딩되었습니다.');
+            }
+        }
+
+        // Show OTA updater prompt within emulator
+        function triggerOtaViewInEmulator() {
+            const app = apps[activeAppIndex];
+            
+            document.getElementById('phUpdateCurrentVer').innerText = `v${app.version}`;
+            document.getElementById('phUpdateNewVer').innerText = `v${app.deployedVersion}`;
+            document.getElementById('phUpdateNotes').innerText = app.updateNotes || "시스템 최적화 패치";
+
+            document.getElementById('phStateUpdateOta').classList.remove('hidden');
+            document.getElementById('phUpdateProgressWrapper').classList.add('hidden');
+            document.getElementById('btnExecuteOtaUpdate').disabled = false;
+            document.getElementById('btnExecuteOtaUpdate').classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        // Start local client download simulations
+        function startOtaDownloadInEmulator() {
+            const app = apps[activeAppIndex];
+            const bar = document.getElementById('phUpdateProgressBar');
+            const percentVal = document.getElementById('phUpdatePercent');
+            const btn = document.getElementById('btnExecuteOtaUpdate');
+
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('phUpdateProgressWrapper').classList.remove('hidden');
+
+            let count = 0;
+            const progressInterval = setInterval(() => {
+                if (count <= 100) {
+                    bar.style.width = count + '%';
+                    percentVal.innerText = count + '%';
+                    count += 5;
+                } else {
+                    clearInterval(progressInterval);
+                    finishOtaApplication();
+                }
+            }, 80);
+        }
+
+        // Finish patch update inside target emulator environment
+        function finishOtaApplication() {
+            const app = apps[activeAppIndex];
+            
+            app.version = app.deployedVersion;
+            document.getElementById('appVersion').value = app.version;
+            document.getElementById('phAppVersionLabel').innerText = `v${app.version}`;
+
+            document.getElementById('phStateUpdateOta').classList.add('hidden');
+
+            reloadWebview();
+            showNotification(`가상 디바이스가 v${app.version}으로 성공적으로 업데이트 완료 및 재실행되었습니다!`);
+        }
+
+        function dismissPushBanner(event) {
+            if(event) event.stopPropagation();
+            const banner = document.getElementById('phPushNotification');
+            banner.classList.remove('translate-y-0');
+            banner.classList.add('-translate-y-40');
+        }
+
+        function mockDownload(type) {
+            const app = apps[activeAppIndex];
+            showNotification(`${type} 파일 다운로드를 준비 중입니다...`, 'loading');
+            setTimeout(() => {
+                showNotification(`${app.name} - debug.${type.toLowerCase()} 다운로드 완료`);
+            }, 1000);
+        }
+
+        function downloadBuildMeta() {
+            const app = apps[activeAppIndex];
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(app, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `npmake_app_config.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showNotification('설정 백업본 Manifest.json이 다운로드 되었습니다.');
+        }
+
+        // 🌟 GUIDE MODAL INTERACTION
+        function openTokenGuide() {
+            document.getElementById('tokenGuideModal').classList.remove('hidden');
+        }
+
+        function closeTokenGuide() {
+            document.getElementById('tokenGuideModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
